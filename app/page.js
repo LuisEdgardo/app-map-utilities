@@ -12,15 +12,39 @@ export default function Home() {
 
   const handleShpUpload = async (e) => {
     e.preventDefault();
-    const file = e.target.file.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.file.files);
+    const shpFile = files.find(f => f.name.endsWith('.shp'));
+    
+    if (!shpFile) {
+      setError('Debe seleccionar un archivo .shp');
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     const formData = new FormData();
-    formData.append('file', file);
+    
+    // Obtener el nombre base del archivo (sin extensión)
+    const baseName = shpFile.name.slice(0, -4);
+    
+    // Agregar todos los archivos relacionados que coincidan con el nombre base
+    files.forEach(file => {
+      const ext = file.name.slice(file.name.lastIndexOf('.'));
+      if (file.name.startsWith(baseName)) {
+        switch (ext.toLowerCase()) {
+          case '.shp':
+          case '.dbf':
+          case '.prj':
+          case '.shx':
+          case '.sbn':
+          case '.sbx':
+            formData.append(`file${ext}`, file);
+            break;
+        }
+      }
+    });
 
     try {
       const response = await fetch('/api/convert', {
@@ -102,24 +126,22 @@ export default function Home() {
             <TabsTrigger value="utm">UTM a Lat/Long</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="shp">
+          <TabsContent value="shp" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Convertir SHP a GeoJSON</CardTitle>
                 <CardDescription>
-                  Selecciona un archivo .shp para convertirlo a formato GeoJSON
+                  Selecciona todos los archivos relacionados (.shp, .dbf, .prj, .shx, .sbn, .sbx)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleShpUpload} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Archivo .shp
-                    </label>
+                <form onSubmit={handleShpUpload}>
+                  <div className="space-y-4">
                     <input
                       type="file"
                       name="file"
-                      accept=".shp"
+                      multiple
+                      accept=".shp,.dbf,.prj,.shx,.sbn,.sbx"
                       className="w-full border dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700"
                     />
                   </div>
